@@ -1,6 +1,9 @@
+const ClientError = require("../exceptions/ClinetError")
+
 class NotesHandler {
-  constructor(service) {
+  constructor(service, validator) {
     this._service = service
+    this._validator = validator
 
     this.postNoteHandler = this.postNoteHandler.bind(this)
     this.getNotesHandler = this.getNotesHandler.bind(this)
@@ -11,13 +14,14 @@ class NotesHandler {
 
   postNoteHandler(request, h) {
     try {
+      this._validator.validateNotePayload(request.payload)
       const { title = 'untitled', body, tags } = request.payload
 
       const noteId = this._service.addNote({ title, body, tags })
 
       const response = h.response({
         status: 'success',
-        message: 'Success for adding a note',
+        message: 'Catatan berhasil ditambahkan',
         data: {
           noteId
         }
@@ -25,11 +29,22 @@ class NotesHandler {
       response.code(201)
       return response
     } catch (error) {
+      if (error instanceof ClientError) {
+        const response = h.response({
+          status: 'fail',
+          message: error.message
+        })
+        response.code(error.statusCode)
+        return response
+      }
+
+      //SERVER ERROR
       const response = h.response({
-        status: 'fail',
-        message: error.message
+        status: 'error',
+        message: 'Maaf, terjadi kegagalan pada server kami.'
       })
-      response.code(400)
+      response.code(500)
+      console.log(error)
       return response
     }
   }
@@ -47,39 +62,62 @@ class NotesHandler {
   getNoteByIdHandler(request, h) {
     try {
       const { id } = request.params
-      const note = this._service.getNoteByIdHandler(id)
+      const note = this._service.getNoteById(id)
       return {
-        status: 'sucess',
+        status: 'success',
         data: {
           note
         }
       }
     } catch (error) {
+      if (error instanceof ClientError) {
+        const response = h.response({
+          status: 'fail',
+          message: error.message
+        })
+        response.code(error.statusCode)
+        return response
+      }
+
+      //SERVER ERROR
       const response = h.response({
-        status: 'fail',
-        message: error.message
+        status: 'error',
+        message: 'Maaf, terjadi kegagalan pada server kami.'
       })
-      response.code(404)
+      response.code(500)
+      console.log(error)
       return response
     }
   }
 
   putNoteByIdHandler(request, h) {
     try {
+      this._validator.validateNotePayload(request.payload)
       const { id } = request.params
 
-      this._service(id, request.payload)
+      this._service.editNoteById(id, request.payload)
 
       return {
         status: 'success',
-        message: 'Success for changing the note'
+        message: 'Catatan berhasil diperbarui'
       }
     } catch (error) {
+      if (error instanceof ClientError) {
+        const response = h.response({
+          status: 'fail',
+          message: error.message
+        })
+        response.code(error.statusCode)
+        return response
+      }
+
+      //SERVER ERROR
       const response = h.response({
-        status: 'fail',
-        message: error.message
+        status: 'error',
+        message: 'Maaf, terjadi kegagalan pada server kami.'
       })
-      response.code(404)
+      response.code(500)
+      console.log(error)
       return response
     }
   }
@@ -87,17 +125,28 @@ class NotesHandler {
   deleteNoteByIdHandler(request, h) {
     try {
       const { id } = request.params
-      this._service.deleteNoteByIdHandler(id)
+      this._service.deleteNoteById(id)
       return {
         status: 'success',
-        message: 'Success for delete a note'
+        message: 'Catatan berhasil dihapus'
       }
     } catch (error) {
+      if (error instanceof ClientError) {
+        const response = h.response({
+          status: 'fail',
+          message: error.message
+        })
+        response.code(error.statusCode)
+        return response
+      }
+
+      //SERVER ERROR
       const response = h.response({
-        status: 'fail',
-        message: error.message
+        status: 'error',
+        message: 'Maaf, terjadi kegagalan pada server kami.'
       })
-      response.code(404)
+      response.code(500)
+      console.log(error)
       return response
     }
   }
